@@ -24,7 +24,7 @@ describe 'maldet' do
                         :ensure => 'present',
                         :cleanup_old_install => true }}
         it { should contain_maldet('https://cdn.rfxn.com/downloads').
-             with(:ensure => 'present') }
+             with(:ensure => 'present', :source => nil, :checksum => nil) }
         it { should contain_package('psmisc').with(:ensure => 'installed') }
         it { should contain_package('wget').with(:ensure => 'installed') }
         it { should contain_package('inotify-tools').with(:ensure => 'installed') }
@@ -35,6 +35,15 @@ describe 'maldet' do
           when '7'
           when '8'
             it { should contain_package('cpulimit').with(:ensure => 'installed') }
+        end
+
+        describe 'installs 2.x from GitHub releases' do
+          let(:params) {{ :version => '2.0.1',
+                          :checksum => '26674c72208a4c32ae4ed8770a2b5c036b35c0894a4812450df11c5a53d7d8e5' }}
+          it { should contain_maldet('https://cdn.rfxn.com/downloads').
+               with(:version => '2.0.1',
+                    :source => 'https://github.com/rfxn/linux-malware-detect/releases/download/v2.0.1/maldet-2.0.1.tar.gz',
+                    :checksum => '26674c72208a4c32ae4ed8770a2b5c036b35c0894a4812450df11c5a53d7d8e5') }
         end
 
         describe 'allow installation from package' do
@@ -52,6 +61,22 @@ describe 'maldet' do
              with(:ensure => 'present') }
         it { should contain_file('/usr/local/maldetect/cron/conf.maldet.cron').
              with(:ensure => 'present') }
+
+        it { should_not contain_file('/etc/cron.weekly/maldet-watchdog') }
+        it { should contain_file('/usr/local/maldetect/conf.maldet').
+             without_content(/scan_hashtype/) }
+
+        describe 'on 2.x' do
+          let(:params) {{ :version => '2.0.1',
+                          :config => { 'scan_clamscan' => true, 'scan_hexfifo' => true },
+                          :config_v2 => { 'scan_clamscan' => false, 'scan_hashtype' => 'both' } }}
+          it { should contain_file('/etc/cron.weekly/maldet-watchdog').
+               with(:ensure => 'absent') }
+          it { should contain_file('/usr/local/maldetect/conf.maldet').
+               with_content(/^scan_clamscan="0"$/).
+               with_content(/^scan_hashtype="both"$/).
+               with_content(/^scan_hexfifo="1"$/) }
+        end
 
         describe 'remove daily cron if daily_scan option is toggled' do
           let(:params) {{ :daily_scan=> false }}
@@ -74,7 +99,13 @@ describe 'maldet' do
         it { should contain_file('/usr/local/maldetect/ignore_sigs').
              with(:ensure => 'present') }
         it { should contain_service('maldet').
-             with(:ensure => 'running') }
+             with(:ensure => 'running', :enable => true) }
+
+        describe 'disables a stopped service so it does not start at boot' do
+          let(:params) {{ :service_ensure => 'stopped' }}
+          it { should contain_service('maldet').
+               with(:ensure => 'stopped', :enable => false) }
+        end
       end
     end
   end
