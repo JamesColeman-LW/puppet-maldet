@@ -63,8 +63,17 @@ describe 'maldet' do
              with(:ensure => 'present') }
 
         it { should_not contain_file('/etc/cron.weekly/maldet-watchdog') }
+        it { should contain_file('/etc/cron.d/maldet-sigup').with(:ensure => 'absent') }
         it { should contain_file('/usr/local/maldetect/conf.maldet').
              without_content(/scan_hashtype/) }
+
+        describe 'on 2.x with the module defaults' do
+          let(:params) {{ :version => '2.0.1', :config => {} }}
+          it { should contain_file('/usr/local/maldetect/conf.maldet').
+               with_content(/^scan_csig="1"$/).
+               with_content(/^scan_yara_timeout="300"$/).
+               with_content(/^quarantine_on_error="1"$/) }
+        end
 
         describe 'on 2.x' do
           let(:params) {{ :version => '2.0.1',
@@ -72,6 +81,7 @@ describe 'maldet' do
                           :config_v2 => { 'scan_clamscan' => false, 'scan_hashtype' => 'both' } }}
           it { should contain_file('/etc/cron.weekly/maldet-watchdog').
                with(:ensure => 'absent') }
+          it { should_not contain_file('/etc/cron.d/maldet-sigup') }
           it { should contain_file('/usr/local/maldetect/conf.maldet').
                with_content(/^scan_clamscan="0"$/).
                with_content(/^scan_hashtype="both"$/).
@@ -99,10 +109,16 @@ describe 'maldet' do
         it { should contain_file('/usr/local/maldetect/ignore_sigs').
              with(:ensure => 'present') }
         it { should contain_service('maldet').
-             with(:ensure => 'running', :enable => true) }
+             with(:ensure => 'running', :enable => nil) }
 
-        describe 'disables a stopped service so it does not start at boot' do
+        describe 'leaves a stopped 1.x service enabled as before' do
           let(:params) {{ :service_ensure => 'stopped' }}
+          it { should contain_service('maldet').
+               with(:ensure => 'stopped', :enable => nil) }
+        end
+
+        describe 'disables a stopped 2.x service so it does not start at boot' do
+          let(:params) {{ :service_ensure => 'stopped', :version => '2.0.1' }}
           it { should contain_service('maldet').
                with(:ensure => 'stopped', :enable => false) }
         end

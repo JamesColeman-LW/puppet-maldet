@@ -29,6 +29,11 @@ class maldet::config (
     }
   } else {
     $final_config = $config
+
+    # Left behind by a 2.x install.sh when a host is downgraded; 1.x never creates it
+    file { '/etc/cron.d/maldet-sigup':
+      ensure => absent,
+    }
   }
 
   file { '/usr/local/maldetect/conf.maldet':

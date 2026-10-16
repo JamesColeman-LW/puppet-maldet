@@ -59,6 +59,9 @@ Upgrading to 2.x changes more than the binary:
 - It also adds `/etc/cron.d/maldet-sigup` (a signature update every 6 hours) and
   `/etc/logrotate.d/maldet`. The module leaves both in place.
 - Logs move to `/var/log/maldet/`, and `/usr/local/maldetect/logs` becomes a link to it.
+- Downgrading to 1.x works by setting `version` back. 1.x's `install.sh` replaces the 2.x tree,
+  `conf.maldet` comes back identical, and the module removes the 2.x `maldet-sigup` cron. 2.x's
+  `/var/log/maldet/` and `/etc/logrotate.d/maldet` are left in place.
 - Scan results are written to `sess/session.tsv.<scanid>`; `sess/session.hits.<scanid>` is gone.
 - Since this module writes the whole `conf.maldet`, a key it leaves out gets 2.x's in-code default,
   not the value in 2.x's shipped `conf.maldet`. Set 2.x-only keys in `config_v2`.
@@ -73,9 +76,9 @@ Whether to install or remove maldet. Valid values are "present" or "absent".
 
 #### `service_ensure` _String_ ('running')
 
-Whether the maldet inotify monitor service should be running. The service is enabled at boot only
-when this is `running`: 2.x's `install.sh` enables it, and an enabled 2.x service starts the monitor
-from `default_monitor_mode` even when `MONITOR_MODE` is unset.
+Whether the maldet inotify monitor service should be running. On 2.x the service is also enabled at
+boot only when this is `running`: 2.x's `install.sh` enables it, and an enabled 2.x service starts the
+monitor from `default_monitor_mode` even when `MONITOR_MODE` is unset. On 1.x, enable isn't managed.
 
 #### `daily_scan` _Boolean_ (true)
 
@@ -101,7 +104,7 @@ Hash of config options to use. Booleans are converted to 0 or 1. Options with mu
 
 See https://www.rfxn.com/appdocs/README.maldetect for available configuration options.
 
-#### `config_v2` _Hash_ (2.x's shipped `scan_hashtype`, `scan_clamscan`, `scan_yara`, `scan_workers`, `email_format`)
+#### `config_v2` _Hash_ (2.x's shipped `scan_hashtype`, `scan_clamscan`, `scan_yara`, `scan_yara_timeout`, `scan_csig`, `scan_workers`, `quarantine_on_error`, `email_format`)
 
 Config options merged over `config` when `version` is 2.x or later, and ignored on 1.x. Use it for
 keys only 2.x understands, or for values that have to differ between 1.x and 2.x hosts while a fleet
